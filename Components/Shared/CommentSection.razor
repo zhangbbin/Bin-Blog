@@ -1,0 +1,31 @@
+﻿@inject IJSRuntime JSRuntime
+
+<div id="comments-container" class="comments-box">
+    <p style="text-align:center; color:#999;">正在加载评论...</p>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var config = new
+            {
+                // ⚠️ 请替换为你自己的 Giscus 配置信息
+                repo = "zhangbbin/comments",
+                repoId = "R_kgDORGo18g",
+                category = "Announcements",
+                categoryId = "DIC_kwDORGo18s4C1wiw",
+                mapping = "pathname",
+                strict = "0",
+                reactionsEnabled = "1",
+                emitMetadata = "0",
+                inputPosition = "bottom",
+                theme = "light",
+                lang = "zh-CN",
+            };
+
+            await JSRuntime.InvokeVoidAsync("loadGiscus", "comments-container", config);
+        }
+    }
+}

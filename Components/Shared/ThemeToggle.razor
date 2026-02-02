@@ -1,0 +1,85 @@
+﻿@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+
+<button class="theme-btn" @onclick="ToggleTheme" title="切换模式">
+    @if (IsDarkMode)
+    {
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+    }
+    else
+    {
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+    }
+</button>
+
+@code {
+    private bool IsDarkMode = false;
+    // private bool _isInitialized = false;
+
+    // ❌ 删除原来的 OnInitializedAsync 方法
+    // protected override async Task OnInitializedAsync() { ... }
+
+    // ✅ 改用 OnAfterRenderAsync
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // 只在组件第一次渲染完成后执行，避免重复执行
+        if (firstRender)
+        {
+            try
+            {
+                // 读取当前的主题状态
+                var theme = await JSRuntime.InvokeAsync<string>("themeManager.getTheme");
+                IsDarkMode = theme == "dark";
+
+                // 因为是在渲染后修改了状态，我们需要手动通知 Blazor 重新渲染 UI 以更新图标
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                // 如果出错（比如 JS 没加载），在这里捕获，就不会出现黄色横条了
+                Console.WriteLine($"加载主题失败: {ex.Message}");
+                try
+                {
+                    // 回退：直接从 localStorage 读取（通过 eval 调用），避免依赖 themeManager
+                    var themeFallback = await JSRuntime.InvokeAsync<string>("eval", "localStorage.getItem('theme')");
+                    IsDarkMode = themeFallback == "dark";
+                    StateHasChanged();
+                }
+                catch { /* 忽略二次失败 */ }
+            }
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        IsDarkMode = !IsDarkMode;
+        var themeName = IsDarkMode ? "dark" : "light";
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("themeManager.setTheme", themeName);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"设置主题失败，尝试回退: {ex.Message}");
+            try
+            {
+                // 回退：直接设置 data-theme 与 localStorage
+                var script = $"document.documentElement.setAttribute('data-theme', '{themeName}'); localStorage.setItem('theme', '{themeName}');";
+                await JSRuntime.InvokeVoidAsync("eval", script);
+            }
+            catch { /* 忽略 */ }
+        }
+    }
+}

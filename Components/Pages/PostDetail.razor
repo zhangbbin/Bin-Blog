@@ -1,0 +1,56 @@
+﻿@page "/post/{Id:int}"
+@using Bin_Blog.Components.Shared
+@using Bin_Blog.Web.Data
+@using Bin_Blog.Web.Services
+@using Bin_Blog.Web.Models
+@using Markdig
+@inject BlogService BlogService
+
+<div class="post-detail-container fade-in">
+    @if (Post == null)
+    {
+        <p>正在加载或文章不存在...</p>
+    }
+    else
+    {
+        <article>
+            <header class="detail-header">
+                <div class="post-meta">
+                    @Post.PublishDate.ToString("yyyy年MM月dd日") · @string.Join(", ", Post.Tags)
+                </div>
+                <h1 class="detail-title">@Post.Title</h1>
+            </header>
+
+            <div class="markdown-body">
+                @((MarkupString)MarkdownHtml)
+            </div>
+
+            <CommentSection />
+        </article>
+
+        <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px;">
+            <a href="/" style="text-decoration: none; color: var(--text-secondary);">&larr; 返回首页</a>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private BlogPost? Post { get; set; }
+    private string MarkdownHtml { get; set; } = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Post = BlogService.GetPostById(Id);
+
+        if (Post != null && !string.IsNullOrEmpty(Post.Content))
+        {
+            // 配置 Markdig 管道
+            var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+            // 将 Markdown 转换为 HTML 字符串
+            MarkdownHtml = Markdown.ToHtml(Post.Content, pipeline);
+        }
+    }
+}

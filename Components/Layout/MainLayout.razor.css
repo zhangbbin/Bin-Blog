@@ -1,0 +1,10 @@
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column; /* 始终纵向排列：顶部导航在最上方，下面是内容和页脚 */
+    min-height: 100vh;
+}
+
+main {
+    flex: 1; /* 主体内容区域占据剩余高度，保证页脚在底部 */
+}

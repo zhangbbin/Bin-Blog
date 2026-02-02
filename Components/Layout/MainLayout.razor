@@ -1,0 +1,41 @@
+﻿@using Bin_Blog.Components.Shared
+@inherits LayoutComponentBase
+
+<div class="page">
+    <header class="navbar-top">
+        <div class="header-content">
+
+            <a href="/" class="logo">MINIMAL BLOG</a>
+
+            <nav class="nav-links">
+                <NavLink href="/" class="nav-link-item" Match="NavLinkMatch.All">首页</NavLink>
+                <NavLink href="/tutorials" class="nav-link-item">教程</NavLink>
+                <NavLink href="/projects" class="nav-link-item">项目</NavLink>
+                <NavLink href="/guestbook" class="nav-link-item">留言板</NavLink>
+                <NavLink href="/friends" class="nav-link-item">友链</NavLink>
+                <NavLink href="/about" class="nav-link-item">关于本站</NavLink>
+            </nav>
+
+            <div class="actions">
+                <ThemeToggle />
+                <img src="https://api.dicebear.com/7.x/miniavs/svg?seed=Alex" alt="User Avatar" class="nav-avatar" title="用户中心" />
+            </div>
+
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="content">
+            @Body
+        </div>
+        <Sidebar />
+    </main>
+
+    <footer style="text-align:center; padding: 40px 20px; color: var(--text-secondary); font-size: 0.85rem;">
+        &copy; 2026 Designed with Blazor
+    </footer>
+</div>
+
+@* Load client-side theme manager used by ThemeToggle component *@
+<script src="/themeManager.js"></script>
+<script src="/giscus.js"></script>

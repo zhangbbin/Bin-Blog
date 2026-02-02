@@ -1,0 +1,301 @@
+/* 全局重置与字体 */
+:root {
+    --bg-color: #f9fafa;
+    --card-bg: #ffffff;
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --accent-color: #d35400; /* 这里的焦糖色作为点缀，显得高级 */
+    --border-radius: 8px;
+}
+
+/* 新增：暗黑模式覆盖 */
+[data-theme="dark"] {
+    --bg-color: #121212; /* 深邃的背景灰 */
+    --card-bg: #1e1e1e; /* 卡片稍微亮一点，形成层级 */
+    --text-primary: #e0e0e0; /* 文字不是纯白，而是柔和的灰白 */
+    --text-secondary: #a0a0a0;
+    --accent-color: #e67e22; /* 强调色稍微提亮，增加在深色上的可见度 */
+    --border-color: #333333;
+}
+
+body {
+    background-color: var(--bg-color);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* 布局容器 */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    display: grid;
+    grid-template-columns: 1fr 300px; /* 左侧自适应，右侧固定300px */
+    gap: 40px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr; /* 移动端变为单列 */
+    }
+}
+
+/* 卡片通用样式 */
+.card {
+    background: var(--card-bg);
+    padding: 25px;
+    margin-bottom: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.03); /* 极淡的阴影 */
+    transition: transform 0.2s ease;
+}
+
+    .card:hover {
+        transform: translateY(-2px); /* 鼠标悬停微动 */
+    }
+
+/* 标题样式 */
+h1, h2, h3 {
+    font-weight: 600;
+    margin-top: 0;
+}
+
+.post-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.post-meta {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.post-summary {
+    color: #555;
+}
+
+/* 侧边栏样式 */
+.profile-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #e0e0e0;
+    margin-bottom: 15px;
+    display: block; /* 占位符 */
+}
+
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag {
+    background-color: #f0f2f5;
+    color: #555;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+    .tag:hover {
+        background-color: var(--accent-color);
+        color: white;
+    }
+
+/* 导航栏简约处理 */
+.navbar-top {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky; /* 让导航栏吸顶，体验更好 */
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    /* 整体宽度由外层导航栏背景撑满，内容区域在中间居中对齐 */
+    width: 100%;
+    max-width: 1100px; /* 与主体内容同宽 */
+    margin: 0 auto; /* 水平居中 */
+    padding: 0 40px; /* 左右保留适当留白 */
+    /* 保持 Grid 布局以实现中间导航的绝对居中 */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    height: 100%; /* 确保高度填满父容器 */
+}
+
+/* 1. 左侧 Logo：强制靠左 */
+.logo {
+    justify-self: start; /* Grid 属性：自身靠左 */
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    letter-spacing: 1px;
+    white-space: nowrap; /* 防止 Logo 换行 */
+}
+
+/* 2. 中间导航：强制居中 */
+.nav-links {
+    justify-self: center; /* Grid 属性：自身居中 */
+    display: flex;
+    gap: 30px; /* 增加一点间距，显得更大气 */
+}
+
+.nav-link-item {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    position: relative;
+    white-space: nowrap; /* 防止文字换行 */
+}
+
+    .nav-link-item:hover {
+        color: var(--accent-color);
+        transform: translateY(-1px); /* 悬停时微动，增加高级感 */
+    }
+
+    .nav-link-item.active {
+        color: var(--text-primary);
+        font-weight: 700;
+    }
+
+/* 3. 右侧操作区：强制靠右 */
+.actions {
+    justify-self: end; /* Grid 属性：自身靠右 */
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.nav-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid transparent; /* 默认透明边框 */
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 加一点投影，让头像浮起来 */
+}
+
+    .nav-avatar:hover {
+        border-color: var(--accent-color);
+        transform: scale(1.05); /* 悬停稍微放大 */
+    }
+
+/* 移动端适配调整 */
+@media (max-width: 768px) {
+    .header-content {
+        padding: 0 20px; /* 手机屏幕小，左右间距改小一点 */
+        grid-template-columns: 1fr 1fr; /* 手机上两列布局 */
+    }
+}
+
+/* 让左边的占位符和右边的按钮宽度一致，确保 LOGO 绝对居中 */
+.placeholder, .actions {
+    width: 40px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* 详情页容器 */
+.post-detail-container {
+    background: #fff;
+    padding: 40px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.03);
+}
+
+.detail-title {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: #000;
+}
+
+/* 模拟简单的 Markdown 样式 */
+.markdown-body {
+    font-size: 1.1rem;
+    color: #333;
+    line-height: 1.8; /* 增加行高，提升阅读体验 */
+}
+
+    .markdown-body h3 {
+        margin-top: 30px;
+        font-size: 1.4rem;
+        color: var(--text-primary);
+    }
+
+    .markdown-body ul {
+        padding-left: 20px;
+        color: #555;
+    }
+
+    .markdown-body blockquote {
+        border-left: 4px solid var(--accent-color);
+        margin: 20px 0;
+        padding-left: 15px;
+        color: #777;
+        background: #f9f9f9;
+        padding: 10px 15px;
+    }
+
+.comments-box {
+    margin-top: 60px;
+    padding-top: 40px;
+    border-top: 1px dashed var(--border-color); /* 修改这里 */
+    min-height: 200px;
+}
+
+.theme-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-primary);
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.3s ease, color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .theme-btn:hover {
+        background-color: rgba(128, 128, 128, 0.1);
+    }
+
+/* 定义淡入动画 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 应用到类 */
+.fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* 我们可以给侧边栏也加上，但稍微慢一点，形成错落感 */
+.sidebar {
+    animation: fadeIn 0.8s ease-out forwards;
+}

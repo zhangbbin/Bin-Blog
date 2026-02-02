@@ -1,0 +1,83 @@
+﻿@using Bin_Blog.Web.Data
+@using Bin_Blog.Web.Models
+@using Bin_Blog.Web.Services
+@inject BlogService BlogService
+
+<div class="sidebar">
+    <div class="card profile-card">
+        <div style="margin-top: 15px; text-align: center;">
+            <a href="/about" style="color: var(--accent-color); text-decoration: none; font-size: 0.9rem; border-bottom: 1px solid var(--accent-color);">
+                了解更多关于我 &rarr;
+            </a>
+        </div>
+        <div class="profile-img"></div> <h3>Alex 的博客</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            全栈开发者 / 极简主义者。
+            <br />
+            分享代码、设计与生活的思考。
+        </p>
+    </div>
+
+    <div class="card">
+        <h4 style="margin-bottom: 15px;">公告</h4>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:10px;">
+            欢迎来到 Alex 的极简博客 🎉
+        </p>
+        <ul style="padding-left:18px; margin:0; font-size:0.9rem; color:var(--text-secondary);">
+            <li>近期正在重构博客前端样式；</li>
+            <li>文章内容会陆续从旧站迁移过来；</li>
+            <li>如有建议，欢迎在留言板反馈。</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h4 style="margin-bottom: 15px;">热门文章</h4>
+        @if (PopularPosts.Any())
+        {
+            <ul style="list-style:none; padding-left:0; margin:0;">
+                @foreach (var post in PopularPosts)
+                {
+                    <li style="margin-bottom:10px;">
+                        <a href="/post/@post.Id"
+                           style="text-decoration:none; color:var(--text-primary); font-size:0.95rem;">
+                            @post.Title
+                        </a>
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">
+                            @post.PublishDate.ToString("yyyy-MM-dd")
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p style="font-size:0.9rem; color:var(--text-secondary); margin:0;">
+                暂无文章
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    private List<BlogPost> PopularPosts = new();
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            // 获取所有文章（防御性编程，避免空引用）
+            var posts = BlogService.GetPosts() ?? new List<BlogPost>();
+
+            // 简单示例：按发布时间倒序取前 5 篇作为热门文章
+            PopularPosts = posts
+                .OrderByDescending(p => p.PublishDate)
+                .Take(5)
+                .ToList();
+        }
+        catch (Exception)
+        {
+            // 如果这里出错，不让整个应用崩溃，只是侧边栏不显示数据
+            PopularPosts = new List<BlogPost>();
+        }
+    }
+}

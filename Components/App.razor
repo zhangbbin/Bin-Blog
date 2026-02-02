@@ -1,0 +1,87 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["Bin-Blog.styles.css"]" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <ReconnectModal />
+    <script>
+        window.loadGiscus = (elementId, config) => {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            // 清空旧的评论框（如果存在）
+            element.innerHTML = "";
+
+            const script = document.createElement("script");
+            script.src = "https://giscus.app/client.js";
+            script.setAttribute("data-repo", config.repo);
+            script.setAttribute("data-repo-id", config.repoId);
+            script.setAttribute("data-category", config.category);
+            script.setAttribute("data-category-id", config.categoryId);
+            script.setAttribute("data-mapping", "title"); // 根据文章标题匹配评论
+            script.setAttribute("data-strict", "0");
+            script.setAttribute("data-reactions-enabled", "1");
+            script.setAttribute("data-emit-metadata", "0");
+            script.setAttribute("data-input-position", "bottom");
+            // 根据当前站点主题设置 Giscus 主题
+            const currentTheme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+            script.setAttribute("data-theme", currentTheme);
+            script.setAttribute("data-lang", "zh-CN");
+            script.setAttribute("crossorigin", "anonymous");
+            script.async = true;
+
+            element.appendChild(script);
+        }
+
+        window.themeManager = {
+            setTheme: (theme) => {
+                // 设置 HTML 标签的属性，例如 <html data-theme="dark">
+                document.documentElement.setAttribute('data-theme', theme);
+                // 保存到本地存储
+                localStorage.setItem('theme', theme);
+
+                // 同步更新 Giscus 的主题
+                const iframe = document.querySelector('iframe.giscus-frame');
+                if (iframe) {
+                    iframe.contentWindow.postMessage(
+                        {
+                            giscus: {
+                                setConfig: {
+                                    theme: theme === 'dark' ? 'dark' : 'light'
+                                }
+                            }
+                        },
+                        'https://giscus.app'
+                    );
+                }
+            },
+            getTheme: () => {
+                return localStorage.getItem('theme');
+            }
+        };
+
+        // 页面加载时立即执行，防止闪烁
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+        })();
+    </script>
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+
+</html>

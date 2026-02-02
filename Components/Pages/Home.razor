@@ -1,0 +1,83 @@
+﻿@page "/"
+@page "/tag/{TagName}"
+@using Bin_Blog.Web.Data
+@using Bin_Blog.Web.Models
+@using Bin_Blog.Web.Services
+@inject BlogService BlogService
+
+<PageTitle>Alex's Blog</PageTitle>
+
+<div class="post-list fade-in">
+
+    @if (string.IsNullOrEmpty(TagName))
+    {
+        <h2 style="margin-bottom: 30px; font-weight:300;">最近文章</h2>
+    }
+    else
+    {
+        <h2 style="margin-bottom: 30px; font-weight:300;">
+            标签: <span style="color:var(--accent-color)">#@TagName</span>
+            <a href="/" style="font-size:0.8rem; float:right; text-decoration:none; color:var(--text-secondary)">清除筛选 ✕</a>
+        </h2>
+    }
+
+    @if (FilteredPosts.Count == 0)
+    {
+        <p>该标签下暂无文章。</p>
+    }
+    else
+    {
+        @foreach (var post in FilteredPosts)
+        {
+            <article class="card">
+                <div class="post-meta">
+                    <span>@post.PublishDate.ToString("yyyy-MM-dd")</span>
+                    <span> · </span>
+                    <span>@post.ReadingTime</span>
+
+                    <span style="margin-left: 10px;">
+                        @foreach (var tag in post.Tags)
+                        {
+                            <span style="margin-right:5px; color: var(--text-secondary);">#@tag</span>
+                        }
+                    </span>
+                </div>
+
+                <h2 class="post-title">
+                    <a href="/post/@post.Id" style="text-decoration:none; color:inherit;">
+                        @post.Title
+                    </a>
+                </h2>
+
+                <p class="post-summary">@post.Summary</p>
+
+                <a href="/post/@post.Id" style="color: var(--accent-color); text-decoration: none; font-weight: 500;">
+                    阅读全文 &rarr;
+                </a>
+            </article>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? TagName { get; set; }
+
+    private List<BlogPost> FilteredPosts = new();
+
+    protected override void OnParametersSet()
+    {
+        var allPosts = BlogService.GetPosts();
+
+        if (string.IsNullOrEmpty(TagName))
+        {
+            FilteredPosts = allPosts;
+        }
+        else
+        {
+            FilteredPosts = allPosts
+                .Where(p => p.Tags.Contains(TagName, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+}
