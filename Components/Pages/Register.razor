@@ -1,0 +1,104 @@
+@page "/register"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>注册</PageTitle>
+
+<div class="card fade-in" style="max-width:400px;margin:60px auto;">
+    <h2 style="margin-bottom:20px;">注册</h2>
+
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <div style="color:green;margin-bottom:10px;">@Message</div>
+    }
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div style="color:red;margin-bottom:10px;">@Error</div>
+    }
+
+    <EditForm Model="model" OnValidSubmit="HandleValidSubmit" FormName="registerForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">用户名</label>
+            <InputText class="form-control" @bind-Value="model.UserName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">邮箱（可选）</label>
+            <InputText class="form-control" @bind-Value="model.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">密码</label>
+            <InputText class="form-control" @bind-Value="model.Password" type="password" />
+        </div>
+
+        <button class="btn btn-primary" type="submit" disabled="@IsSubmitting">
+            @(IsSubmitting ? "注册中..." : "注册")
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    private RegisterModel model = new();
+    private bool IsSubmitting;
+    private string? Message;
+    private string? Error;
+
+    private async Task HandleValidSubmit()
+    {
+        Message = null;
+        Error = null;
+        IsSubmitting = true;
+        try
+        {
+            // Debug log to verify client-side model values
+            Console.WriteLine($"Sending register request: UserName='{model.UserName}', Email='{model.Email}', Password='{(string.IsNullOrEmpty(model.Password) ? "<empty>" : "<hidden>")}'");
+
+            var apiUrl = $"{Navigation.BaseUri}api/auth/register";
+            // Send the model directly to ensure correct JSON shape
+            var response = await Http.PostAsJsonAsync(apiUrl, model);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Message = "注册成功，请前往登录。";
+                model = new RegisterModel();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                Error = "用户名已存在。";
+            }
+            else
+            {
+                Error = "注册失败，请稍后再试。";
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = $"注册出错：{ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    public class RegisterModel
+    {
+        [Required(ErrorMessage = "用户名不能为空")]
+        public string UserName { get; set; } = string.Empty;
+
+        // [EmailAddress(ErrorMessage = "邮箱格式不正确")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "密码不能为空")]
+        [MinLength(6, ErrorMessage = "密码至少6位")]
+        public string Password { get; set; } = string.Empty;
+    }
+}
+

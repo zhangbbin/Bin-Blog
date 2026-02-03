@@ -1,0 +1,253 @@
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+@if (IsVisible)
+{
+    <div class="auth-modal-overlay" @onclick="CloseModal">
+        <div class="auth-modal-content" @onclick:stopPropagation="true">
+            <div class="auth-modal-header">
+                <h2>@(IsLoginMode ? "登录" : "注册")</h2>
+                <button class="auth-modal-close" @onclick="CloseModal" type="button">×</button>
+            </div>
+
+            <div class="auth-modal-body">
+                @if (!string.IsNullOrEmpty(Error))
+                {
+                    <div class="auth-error">@Error</div>
+                }
+
+                @if (!string.IsNullOrEmpty(SuccessMessage))
+                {
+                    <div class="auth-success">@SuccessMessage</div>
+                }
+
+                @if (IsLoginMode)
+                {
+                    <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="auth-validation-summary" />
+
+                        <div class="auth-form-group">
+                            <label class="auth-label">用户名</label>
+                            <InputText class="auth-input" @bind-Value="loginModel.UserName" placeholder="请输入用户名" />
+                        </div>
+
+                        <div class="auth-form-group">
+                            <label class="auth-label">密码</label>
+                            <InputText class="auth-input" @bind-Value="loginModel.Password" type="password" placeholder="请输入密码" />
+                        </div>
+
+                        <button class="auth-submit-btn" type="submit" disabled="@IsSubmitting">
+                            @(IsSubmitting ? "登录中..." : "登录")
+                        </button>
+                    </EditForm>
+                }
+                else
+                {
+                    <EditForm Model="registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="auth-validation-summary" />
+
+                        <div class="auth-form-group">
+                            <label class="auth-label">用户名</label>
+                            <InputText class="auth-input" @bind-Value="registerModel.UserName" placeholder="请输入用户名" />
+                        </div>
+
+                        <div class="auth-form-group">
+                            <label class="auth-label">邮箱（可选）</label>
+                            <InputText class="auth-input" @bind-Value="registerModel.Email" placeholder="请输入邮箱" />
+                        </div>
+
+                        <div class="auth-form-group">
+                            <label class="auth-label">密码</label>
+                            <InputText class="auth-input" @bind-Value="registerModel.Password" type="password" placeholder="至少6位" />
+                        </div>
+
+                        <button class="auth-submit-btn" type="submit" disabled="@IsSubmitting">
+                            @(IsSubmitting ? "注册中..." : "注册")
+                        </button>
+                    </EditForm>
+                }
+
+                <div class="auth-switch">
+                    @if (IsLoginMode)
+                    {
+                        <span>还没有账号？</span>
+                        <a href="#" @onclick="SwitchToRegister" @onclick:preventDefault="true">立即注册</a>
+                    }
+                    else
+                    {
+                        <span>已有账号？</span>
+                        <a href="#" @onclick="SwitchToLogin" @onclick:preventDefault="true">立即登录</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public EventCallback OnLoginSuccess { get; set; }
+    [Parameter] public bool StartWithLogin { get; set; } = true;
+
+    private bool IsLoginMode = true;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            IsLoginMode = StartWithLogin;
+            ClearMessages();
+        }
+    }
+    private bool IsSubmitting = false;
+    private string? Error;
+    private string? SuccessMessage;
+
+    private LoginModel loginModel = new();
+    private RegisterModel registerModel = new();
+
+    private void SwitchToLogin()
+    {
+        IsLoginMode = true;
+        ClearMessages();
+        loginModel = new();
+    }
+
+    private void SwitchToRegister()
+    {
+        IsLoginMode = false;
+        ClearMessages();
+        registerModel = new();
+    }
+
+    private void ClearMessages()
+    {
+        Error = null;
+        SuccessMessage = null;
+    }
+
+    private async Task CloseModal()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+        ClearMessages();
+        loginModel = new();
+        registerModel = new();
+    }
+
+    private async Task HandleLogin()
+    {
+        Error = null;
+        SuccessMessage = null;
+        IsSubmitting = true;
+        try
+        {
+            var apiUrl = $"{Navigation.BaseUri}api/auth/login";
+            var response = await Http.PostAsJsonAsync(apiUrl, new
+            {
+                loginModel.UserName,
+                loginModel.Password
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Error = "用户名或密码错误。";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<LoginResult>();
+            if (result is null || string.IsNullOrEmpty(result.Token))
+            {
+                Error = "登录失败，请稍后重试。";
+                return;
+            }
+
+            await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+            await JS.InvokeVoidAsync("localStorage.setItem", "userName", result.UserName);
+            await JS.InvokeVoidAsync("localStorage.setItem", "userRole", result.Role);
+
+            SuccessMessage = $"欢迎回来，{result.UserName}！";
+            await Task.Delay(500);
+            await OnLoginSuccess.InvokeAsync();
+            await CloseModal();
+        }
+        catch (Exception ex)
+        {
+            Error = $"登录出错：{ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        Error = null;
+        SuccessMessage = null;
+        IsSubmitting = true;
+        try
+        {
+            var apiUrl = $"{Navigation.BaseUri}api/auth/register";
+            var response = await Http.PostAsJsonAsync(apiUrl, registerModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                SuccessMessage = "注册成功！正在切换到登录...";
+                await Task.Delay(1000);
+                SwitchToLogin();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                Error = "用户名已存在。";
+            }
+            else
+            {
+                var errorText = await response.Content.ReadAsStringAsync();
+                Error = string.IsNullOrEmpty(errorText) ? "注册失败，请稍后再试。" : errorText;
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = $"注册出错：{ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "用户名不能为空")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "密码不能为空")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class RegisterModel
+    {
+        [Required(ErrorMessage = "用户名不能为空")]
+        public string UserName { get; set; } = string.Empty;
+
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "密码不能为空")]
+        [MinLength(6, ErrorMessage = "密码至少6位")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class LoginResult
+    {
+        public string Token { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+}

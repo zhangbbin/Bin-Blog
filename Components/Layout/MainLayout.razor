@@ -1,28 +1,9 @@
-﻿@using Bin_Blog.Components.Shared
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
+@using Bin_Blog.Components.Shared
 
 <div class="page">
-    <header class="navbar-top">
-        <div class="header-content">
-
-            <a href="/" class="logo">MINIMAL BLOG</a>
-
-            <nav class="nav-links">
-                <NavLink href="/" class="nav-link-item" Match="NavLinkMatch.All">首页</NavLink>
-                <NavLink href="/tutorials" class="nav-link-item">教程</NavLink>
-                <NavLink href="/projects" class="nav-link-item">项目</NavLink>
-                <NavLink href="/guestbook" class="nav-link-item">留言板</NavLink>
-                <NavLink href="/friends" class="nav-link-item">友链</NavLink>
-                <NavLink href="/about" class="nav-link-item">关于本站</NavLink>
-            </nav>
-
-            <div class="actions">
-                <ThemeToggle />
-                <img src="https://api.dicebear.com/7.x/miniavs/svg?seed=Alex" alt="User Avatar" class="nav-avatar" title="用户中心" />
-            </div>
-
-        </div>
-    </header>
+    @* 使用刚刚封装的交互式组件 *@
+    <LayoutHeader />
 
     <main class="container">
         <div class="content">
@@ -36,6 +17,10 @@
     </footer>
 </div>
 
-@* Load client-side theme manager used by ThemeToggle component *@
+@* MainLayout 不需要 @code 块来处理登录逻辑了，
+   因为那些逻辑都封装在 LayoutHeader 内部了。
+*@
+
+@* 脚本引用建议放在 App.razor 中，但放在这里如果不报错也可以保留 *@
 <script src="/themeManager.js"></script>
 <script src="/giscus.js"></script>

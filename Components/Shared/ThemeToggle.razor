@@ -26,10 +26,6 @@
 
 @code {
     private bool IsDarkMode = false;
-    // private bool _isInitialized = false;
-
-    // ❌ 删除原来的 OnInitializedAsync 方法
-    // protected override async Task OnInitializedAsync() { ... }
 
     // ✅ 改用 OnAfterRenderAsync
     protected override async Task OnAfterRenderAsync(bool firstRender)

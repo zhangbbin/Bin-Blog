@@ -1,0 +1,66 @@
+﻿@rendermode InteractiveServer
+@using Bin_Blog.Components.Shared
+@inject NavigationManager Navigation
+
+<header class="navbar-top">
+    <div class="header-content">
+        <a href="/" class="logo">BIN'S BLOG</a>
+
+        <nav class="nav-links">
+            @* 注意：在交互式组件中，NavLink 依然可用 *@
+            <NavLink href="/" class="nav-link-item" Match="NavLinkMatch.All">首页</NavLink>
+            <NavLink href="/tutorials" class="nav-link-item">教程</NavLink>
+            <NavLink href="/projects" class="nav-link-item">项目</NavLink>
+            <NavLink href="/guestbook" class="nav-link-item">留言板</NavLink>
+            <NavLink href="/friends" class="nav-link-item">友链</NavLink>
+            <NavLink href="/about" class="nav-link-item">关于本站</NavLink>
+        </nav>
+
+        <div class="actions">
+            <ThemeToggle />
+
+            @* 这里可以直接使用 @ref，因为 LayoutHeader 也是交互式的 *@
+            <AuthStatus @ref="authStatusRef"
+                        OnLoginClick="ShowLoginModal"
+                        OnRegisterClick="ShowRegisterModal" />
+
+            <AuthModal IsVisible="isAuthModalVisible"
+                       IsVisibleChanged="OnAuthModalVisibilityChanged"
+                       StartWithLogin="isLoginMode"
+                       OnLoginSuccess="HandleLoginSuccess" />
+        </div>
+    </div>
+</header>
+
+@code {
+    private bool isAuthModalVisible = false;
+    private bool isLoginMode = true;
+    private AuthStatus? authStatusRef;
+
+    private void ShowLoginModal()
+    {
+        isLoginMode = true;
+        isAuthModalVisible = true;
+    }
+
+    private void ShowRegisterModal()
+    {
+        isLoginMode = false;
+        isAuthModalVisible = true;
+    }
+
+    private async Task HandleLoginSuccess()
+    {
+        // 这里的逻辑现在可以正常工作了
+        if (authStatusRef != null)
+        {
+            await authStatusRef.CheckLoginStatus();
+        }
+        isAuthModalVisible = false; // 登录成功后通常关闭弹窗
+    }
+
+    private async Task OnAuthModalVisibilityChanged(bool visible)
+    {
+        isAuthModalVisible = visible;
+    }
+}

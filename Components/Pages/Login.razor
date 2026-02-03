@@ -1,0 +1,97 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>登录</PageTitle>
+
+<div class="card fade-in" style="max-width:400px;margin:60px auto;">
+    <h2 style="margin-bottom:20px;">登录</h2>
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div style="color:red;margin-bottom:10px;">@Error</div>
+    }
+
+    <EditForm Model="loginModel" OnValidSubmit="HandleValidSubmit" FormName="loginForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">用户名</label>
+            <InputText class="form-control" @bind-Value="loginModel.UserName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">密码</label>
+            <InputText class="form-control" @bind-Value="loginModel.Password" type="password" />
+        </div>
+
+        <button class="btn btn-primary" type="submit" disabled="@IsSubmitting">
+            @(IsSubmitting ? "登录中..." : "登录")
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private bool IsSubmitting;
+    private string? Error;
+
+    private async Task HandleValidSubmit()
+    {
+        Error = null;
+        IsSubmitting = true;
+        try
+        {
+            var apiUrl = $"{Navigation.BaseUri}api/auth/login";
+            var response = await Http.PostAsJsonAsync(apiUrl, new
+            {
+                loginModel.UserName,
+                loginModel.Password
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Error = "用户名或密码错误。";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<LoginResult>();
+            if (result is null || string.IsNullOrEmpty(result.Token))
+            {
+                Error = "登录失败，请稍后重试。";
+                return;
+            }
+
+            // 简单示例：将 Token 存到浏览器本地存储，后续请求时手动带上
+            await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+        }
+        catch (Exception ex)
+        {
+            Error = $"登录出错：{ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required]
+        public string UserName { get; set; } = string.Empty;
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class LoginResult
+    {
+        public string Token { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+}
+

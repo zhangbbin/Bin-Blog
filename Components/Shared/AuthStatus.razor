@@ -1,0 +1,59 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<div class="auth-status">
+    @if (IsLoggedIn)
+    {
+        <span class="auth-username">@UserName</span>
+        <button class="auth-logout-btn" @onclick="HandleLogout">退出</button>
+    }
+    else
+    {
+        <button class="auth-link-btn" @onclick="@(_ => OnLoginClick.InvokeAsync())">登录</button>
+        <span style="margin: 0 8px; color: var(--text-secondary);">|</span>
+        <button class="auth-link-btn" @onclick="@(_ => OnRegisterClick.InvokeAsync())">注册</button>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnLoginClick { get; set; }
+    [Parameter] public EventCallback OnRegisterClick { get; set; }
+
+    private bool IsLoggedIn { get; set; }
+    private string UserName { get; set; } = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await CheckLoginStatus();
+        }
+    }
+
+    public async Task CheckLoginStatus()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
+            var userName = await JS.InvokeAsync<string>("localStorage.getItem", "userName");
+            
+            IsLoggedIn = !string.IsNullOrEmpty(token);
+            UserName = userName ?? string.Empty;
+            StateHasChanged();
+        }
+        catch
+        {
+            IsLoggedIn = false;
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "userName");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "userRole");
+        IsLoggedIn = false;
+        UserName = string.Empty;
+        StateHasChanged();
+    }
+}
