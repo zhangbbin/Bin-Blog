@@ -41,9 +41,9 @@
     private BlogPost? Post { get; set; }
     private string MarkdownHtml { get; set; } = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        Post = BlogService.GetPostById(Id);
+        Post = await BlogService.GetPostByIdAsync(Id);
 
         if (Post != null && !string.IsNullOrEmpty(Post.Content))
         {

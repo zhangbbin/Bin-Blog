@@ -1,0 +1,98 @@
+﻿@rendermode InteractiveServer
+@using Bin_Blog.Web.Data
+@using Bin_Blog.Web.Services
+@inject BlogService BlogService
+@inject NavigationManager Nav
+
+<div class="category-bar fade-in">
+    <div class="category-list">
+        <button class="cat-item @(CurrentCategoryId == null ? "active" : "")" @onclick="() => SelectCategory(null)">全部</button>
+
+        @foreach (var cat in categories)
+        {
+            <button class="cat-item @(CurrentCategoryId == cat.Id ? "active" : "")" @onclick="() => SelectCategory(cat.Id)">
+                @cat.Name
+            </button>
+        }
+    </div>
+
+    <div class="category-actions">
+        <div class="search-container @(isSearchActive ? "active" : "")">
+            <input type="text" class="search-input"
+                   placeholder="搜索文章..."
+                   @bind="SearchKeyword"
+                   @bind:event="oninput"
+                   @onkeydown="HandleEnter" />
+
+            <button class="search-btn" @onclick="ToggleSearch" type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <button class="write-post-btn" type="button" @onclick="GoWrite">
+            写文章
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<int?> OnCategorySelected { get; set; }
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    private List<Category> categories = new();
+    private int? CurrentCategoryId = null;
+    private string SearchKeyword { get; set; } = "";
+    private bool isSearchActive = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 加载分类
+        categories = await BlogService.GetCategoriesAsync();
+        // 如果数据库是空的，可以调用 SeedCategoriesAsync()，实际生产环境请手动添加数据
+    }
+
+    private async Task SelectCategory(int? id)
+    {
+        CurrentCategoryId = id;
+        await OnCategorySelected.InvokeAsync(id);
+    }
+
+    private void ToggleSearch()
+    {
+        // 如果已经展开且有内容，点击放大镜则执行搜索
+        if (isSearchActive && !string.IsNullOrWhiteSpace(SearchKeyword))
+        {
+            PerformSearch();
+        }
+        else
+        {
+            // 否则切换展开状态
+            isSearchActive = !isSearchActive;
+        }
+    }
+
+    private async Task HandleEnter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await PerformSearch();
+        }
+    }
+
+    private async Task PerformSearch()
+    {
+        await OnSearch.InvokeAsync(SearchKeyword);
+    }
+
+    private void GoWrite()
+    {
+        Nav.NavigateTo("/write");
+    }
+
+    private async Task SomeMethodAsync()
+    {
+        await PerformSearch();
+    }
+}

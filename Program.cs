@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configure the database connection
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<BlogDbContext>(options =>
+builder.Services.AddDbContextFactory<BlogDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 // Configure services for Razor Components
@@ -57,6 +57,17 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<BlogDbContext>>();
+    await using var db = await dbFactory.CreateDbContextAsync();
+    await db.Database.MigrateAsync();
+
+    var blogService = scope.ServiceProvider.GetRequiredService<BlogService>();
+    await blogService.SeedCategoriesAsync();
+    await blogService.SeedAnnouncementsAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -112,6 +123,7 @@ authGroup.MapPost("/login", async (LoginRequest request, AuthService authService
     {
         Token = token,
         UserName = user.UserName,
+        NickName = string.IsNullOrWhiteSpace(user.NickName) ? user.UserName : user.NickName,
         Role = user.Role.ToString()
     };
 

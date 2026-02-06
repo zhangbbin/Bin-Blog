@@ -1,11 +1,26 @@
 @rendermode InteractiveServer
 @inject IJSRuntime JS
+@inject Bin_Blog.Web.Services.BlogService BlogService
 
 <div class="auth-status">
     @if (IsLoggedIn)
     {
-        <span class="auth-username">@UserName</span>
-        <button class="auth-logout-btn" @onclick="HandleLogout">退出</button>
+        <div class="user-profile-trigger" @onclick="OpenProfile">
+            @* 头像显示逻辑：有头像显示头像，没有显示默认图 *@
+            <img src="@(string.IsNullOrEmpty(AvatarUrl) ? "/images/default-avatar.png" : AvatarUrl)"
+                 class="nav-avatar"
+                 onerror="this.src='/images/default-avatar.png'"
+                 alt="@UserName" />
+
+            <span class="auth-username">@UserName</span>
+        </div>
+
+        <button class="auth-logout-btn" @onclick="HandleLogout" title="退出登录">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z" />
+                <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
+            </svg>
+        </button>
     }
     else
     {
@@ -15,12 +30,21 @@
     }
 </div>
 
+@* 引入资料卡片组件 *@
+<UserProfileCard IsVisible="showProfileCard"
+                 IsVisibleChanged="@(val => showProfileCard = val)"
+                 UserName="@_loginUserName"
+                 OnProfileUpdated="RefreshUserInfo" />
+
 @code {
     [Parameter] public EventCallback OnLoginClick { get; set; }
     [Parameter] public EventCallback OnRegisterClick { get; set; }
 
     private bool IsLoggedIn { get; set; }
     private string UserName { get; set; } = string.Empty;
+    private string _loginUserName { get; set; } = string.Empty;
+    private string? AvatarUrl { get; set; } // 本地存储的头像 URL
+    private bool showProfileCard = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -36,9 +60,18 @@
         {
             var token = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
             var userName = await JS.InvokeAsync<string>("localStorage.getItem", "userName");
-            
+            var nickName = await JS.InvokeAsync<string>("localStorage.getItem", "nickName");
+
             IsLoggedIn = !string.IsNullOrEmpty(token);
-            UserName = userName ?? string.Empty;
+            _loginUserName = userName ?? string.Empty;
+            UserName = string.IsNullOrWhiteSpace(nickName) ? _loginUserName : nickName;
+
+            if (IsLoggedIn && !string.IsNullOrEmpty(_loginUserName))
+            {
+                // 登录成功后，去数据库查一下最新的头像
+                await RefreshUserInfo();
+            }
+
             StateHasChanged();
         }
         catch
@@ -47,13 +80,36 @@
         }
     }
 
+    private async Task RefreshUserInfo()
+    {
+        // 从数据库获取最新头像
+        var userName = await JS.InvokeAsync<string>("localStorage.getItem", "userName");
+        if (string.IsNullOrWhiteSpace(userName)) return;
+
+        var user = await BlogService.GetUserByNameAsync(userName);
+        if (user != null)
+        {
+            AvatarUrl = user.AvatarUrl;
+            await JS.InvokeVoidAsync("localStorage.setItem", "nickName", string.IsNullOrWhiteSpace(user.NickName) ? user.UserName : user.NickName);
+            UserName = string.IsNullOrWhiteSpace(user.NickName) ? user.UserName : user.NickName;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenProfile()
+    {
+        showProfileCard = true;
+    }
+
     private async Task HandleLogout()
     {
         await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
         await JS.InvokeVoidAsync("localStorage.removeItem", "userName");
-        await JS.InvokeVoidAsync("localStorage.removeItem", "userRole");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "nickName");
         IsLoggedIn = false;
         UserName = string.Empty;
+        _loginUserName = string.Empty;
+        AvatarUrl = null;
         StateHasChanged();
     }
 }

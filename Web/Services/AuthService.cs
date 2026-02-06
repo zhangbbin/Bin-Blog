@@ -34,6 +34,7 @@ public class AuthService
         var user = new User
         {
             UserName = userName,
+            NickName = userName,
             Email = email,
             PasswordHash = hash,
             PasswordSalt = salt,

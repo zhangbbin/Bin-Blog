@@ -170,9 +170,11 @@
 
             await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
             await JS.InvokeVoidAsync("localStorage.setItem", "userName", result.UserName);
+            await JS.InvokeVoidAsync("localStorage.setItem", "nickName", string.IsNullOrWhiteSpace(result.NickName) ? result.UserName : result.NickName);
             await JS.InvokeVoidAsync("localStorage.setItem", "userRole", result.Role);
 
-            SuccessMessage = $"欢迎回来，{result.UserName}！";
+            var displayName = string.IsNullOrWhiteSpace(result.NickName) ? result.UserName : result.NickName;
+            SuccessMessage = $"欢迎回来，{displayName}！";
             await Task.Delay(500);
             await OnLoginSuccess.InvokeAsync();
             await CloseModal();
@@ -248,6 +250,7 @@
     {
         public string Token { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
+        public string NickName { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
     }
 }

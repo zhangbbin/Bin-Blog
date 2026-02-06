@@ -24,6 +24,10 @@ namespace Bin_Blog.Web.Models
         /// </summary>
         public DbSet<BlogPost> BlogPosts { get; set; } = null!;
 
+        public DbSet<Category> Categories { get; set; }
+
+        public DbSet<Announcement> Announcements { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -58,6 +62,14 @@ namespace Bin_Blog.Web.Models
                       .WithMany(u => u.Posts)
                       .HasForeignKey(p => p.AuthorId)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Announcement>(entity =>
+            {
+                entity.HasKey(a => a.Id);
+                entity.Property(a => a.Title).IsRequired().HasMaxLength(200);
+                entity.Property(a => a.Content).HasMaxLength(4000);
+                entity.HasIndex(a => new { a.IsPublished, a.IsPinned, a.PublishDate });
             });
         }
     }

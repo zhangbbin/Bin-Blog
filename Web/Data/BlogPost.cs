@@ -61,6 +61,9 @@ namespace Bin_Blog.Web.Data
         public int LikeCount { get; set; } = 0;
         public int FavoriteCount { get; set; } = 0;
 
+        public int? CategoryId { get; set; } //以此支持未分类文章
+        public Category? Category { get; set; }
+
         // ====== 计算属性示例：阅读时长 ======
         public string ReadingTime
         {

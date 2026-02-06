@@ -8,6 +8,47 @@
     --border-radius: 8px;
 }
 
+.category-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.write-post-btn {
+    border: 1px solid var(--border-color, #ddd);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.write-post-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.write-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color, #ddd);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.write-back-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
 /* 新增：暗黑模式覆盖 */
 [data-theme="dark"] {
     --bg-color: #121212; /* 深邃的背景灰 */
@@ -205,11 +246,64 @@ h1, h2, h3 {
     }
 }
 
-/* 让左边的占位符和右边的按钮宽度一致，确保 LOGO 绝对居中 */
-.placeholder, .actions {
+/* 让左边的占位符宽度固定，确保 LOGO 绝对居中（右侧 actions 不应固定宽度，否则会挤压内容导致竖排） */
+.placeholder {
     width: 40px;
     display: flex;
     justify-content: flex-end;
+}
+
+/* 顶部登录状态（AuthStatus） */
+.auth-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.user-profile-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.auth-username {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-link-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.auth-link-btn:hover {
+    color: var(--accent-color);
+}
+
+.auth-logout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.auth-logout-btn:hover {
+    color: var(--accent-color);
 }
 
 /* 详情页容器 */
@@ -554,3 +648,209 @@ h1, h2, h3 {
 [data-theme="dark"] .auth-logout-btn:hover {
     border-color: var(--accent-color);
 }
+
+/* 1. 遮罩层变成 Flex 容器，负责居中 */
+.user-card-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw; /* 确保占满视口宽度 */
+    height: 100vh; /* 确保占满视口高度 */
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000; /* 确保在最上层 */
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center; /* 垂直居中 */
+    backdrop-filter: blur(2px); /* 可选：给背景加点模糊效果 */
+}
+
+/* 2. 卡片移除定位属性，回归文档流 */
+.user-card {
+    /* 移除 position: fixed, top, left, transform */
+    position: relative;
+    background: var(--bg-primary, #fff);
+    width: 320px;
+    max-width: 90%; /* 移动端适配 */
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    /* 确保文字颜色适配主题 */
+    color: var(--text-primary, #333);
+}
+
+/* 其他样式保持不变 */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+}
+
+.avatar-section {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #eee;
+}
+
+.btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+    .form-group label {
+        display: block;
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+        color: #666;
+    }
+
+.form-control {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* 添加到 app.css */
+.user-profile-trigger {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 20px;
+    transition: background 0.2s;
+    margin-right: 8px;
+}
+
+    .user-profile-trigger:hover {
+        background-color: rgba(0,0,0,0.05);
+    }
+
+.nav-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+    border: 1px solid #ddd;
+}
+
+/* CategoryBar 样式 */
+.category-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff; /* 或 var(--bg-primary) */
+    padding: 10px 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    width: 100%;
+    /* 粘性定位：滚动时吸顶 (可选) */
+    /* position: sticky; top: 0; z-index: 10; */
+}
+
+/* 分类列表 */
+.category-list {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto; /* 移动端支持横向滚动 */
+    padding-right: 10px;
+    scrollbar-width: none; /* 隐藏滚动条 */
+    max-width: 62%;
+}
+
+    .category-list::-webkit-scrollbar {
+        display: none;
+    }
+
+.cat-item {
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: #666; /* var(--text-secondary) */
+    cursor: pointer;
+    padding: 5px 0;
+    position: relative;
+    white-space: nowrap;
+    transition: color 0.3s;
+}
+
+    .cat-item:hover {
+        color: #007bff;
+    }
+
+    .cat-item.active {
+        color: #007bff;
+        font-weight: 600;
+    }
+        /* 选中下划线效果 */
+        .cat-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #007bff;
+            border-radius: 2px;
+        }
+
+/* 搜索框动画 */
+.search-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.search-input {
+    width: 0; /* 默认宽度为0 */
+    opacity: 0;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 4px 10px;
+    padding-right: 30px; /* 给图标留位置 */
+    outline: none;
+    transition: all 0.3s ease;
+    background: transparent;
+}
+
+/* 展开状态 */
+.search-container.active .search-input {
+    width: 200px;
+    opacity: 1;
+    background: #fff;
+}
+
+.search-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    margin-left: -28px; /* 让图标重叠在input右侧 */
+    z-index: 2;
+    transition: color 0.2s;
+}
+
+    .search-btn:hover {
+        color: #007bff;
+    }

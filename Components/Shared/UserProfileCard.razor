@@ -1,0 +1,201 @@
+﻿@using Bin_Blog.Web.Data
+@using Bin_Blog.Web.Services
+@inject BlogService BlogService
+
+@if (IsVisible)
+{
+    <div class="user-card-backdrop" @onclick="Close">
+        <div class="user-card fade-in" @onclick:stopPropagation>
+        <div class="card-header">
+            <h4>个人信息</h4>
+            <button class="close-btn" @onclick="Close">&times;</button>
+        </div>
+
+        @if (isLoading)
+        {
+            <p class="text-center">加载中...</p>
+        }
+        else if (currentUser != null)
+        {
+            <div class="card-body">
+                <div class="avatar-section">
+                    @* 显示当前头像或默认头像 *@
+                    <img src="@(string.IsNullOrEmpty(editModel.AvatarUrl) ? "/images/default-avatar.png" : editModel.AvatarUrl)"
+                         class="avatar-large"
+                         onerror="this.src='/images/default-avatar.png'" />
+                </div>
+
+                @if (isEditing)
+                {
+                    <div class="edit-form">
+                        <div class="form-group">
+                            <label>用户名</label>
+                            <input type="text" class="form-control" value="@currentUser.UserName" disabled />
+                            <small class="text-muted">用户名不可更改</small>
+                        </div>
+                        <div class="form-group">
+                            <label>昵称</label>
+                            <input type="text" class="form-control" @bind="editModel.NickName" placeholder="输入昵称..." />
+                        </div>
+                        @* <div class="form-group">
+                            <label>头像 URL</label>
+                            <input type="text" class="form-control" @bind="editModel.AvatarUrl" placeholder="输入图片链接..." />
+                        </div> *@
+                        <div class="form-group">
+                            <label>修改头像</label>
+                            <div class="avatar-upload-box">
+                                @* 使用 InputFile 组件 *@
+                                <InputFile OnChange="HandleFileSelected" accept=".jpg,.jpeg,.png,.gif" class="form-control" />
+
+                                @if (isUploading)
+                                {
+                                    <span class="uploading-text">上传中...</span>
+                                }
+                                else if (!string.IsNullOrEmpty(uploadError))
+                                {
+                                    <span class="text-danger small">@uploadError</span>
+                                }
+                            </div>
+                            <small class="text-muted">支持 JPG, PNG, GIF，最大 5MB</small>
+                        </div>
+                        <div class="form-group">
+                            <label>邮箱</label>
+                            <input type="email" class="form-control" @bind="editModel.Email" />
+                        </div>
+                        <div class="form-group">
+                            <label>个人简介</label>
+                            <textarea class="form-control" @bind="editModel.Bio" rows="2"></textarea>
+                        </div>
+
+                        <div class="btn-row">
+                            <button class="btn btn-primary btn-sm" @onclick="SaveProfile">保存</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="() => isEditing = false">取消</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="info-view">
+                        <h5 class="username">@(string.IsNullOrWhiteSpace(currentUser.NickName) ? currentUser.UserName : currentUser.NickName)</h5>
+                        <p class="email">@currentUser.Email</p>
+                        <p class="bio">@(string.IsNullOrEmpty(currentUser.Bio) ? "这个家伙很懒，什么也没写。" : currentUser.Bio)</p>
+
+                        <button class="btn btn-outline-primary btn-sm w-100 mt-2" @onclick="StartEdit">编辑资料</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public string UserName { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnProfileUpdated { get; set; } // 通知父组件刷新
+
+    private User? currentUser;
+    private User editModel = new();
+    private bool isLoading = true;
+    private bool isEditing = false;
+
+    private bool isUploading = false;
+    private string? uploadError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !string.IsNullOrEmpty(UserName))
+        {
+            isLoading = true;
+            isEditing = false; // 每次打开重置为查看模式
+            currentUser = await BlogService.GetUserByNameAsync(UserName);
+            if (currentUser != null)
+            {
+                // 复制一份数据用于编辑
+                editModel = new User
+                {
+                    Id = currentUser.Id,
+                    UserName = currentUser.UserName,
+                    NickName = currentUser.NickName,
+                    Email = currentUser.Email,
+                    AvatarUrl = currentUser.AvatarUrl,
+                    Bio = currentUser.Bio
+                };
+            }
+            isLoading = false;
+        }
+    }
+
+    private void StartEdit()
+    {
+        isEditing = true;
+    }
+
+    private async Task SaveProfile()
+    {
+        if (currentUser == null) return;
+
+        var success = await BlogService.UpdateUserProfileAsync(currentUser.Id, editModel.NickName, editModel.Email, editModel.AvatarUrl, editModel.Bio);
+        if (success)
+        {
+            // 更新本地显示的数据
+            currentUser.NickName = editModel.NickName;
+            currentUser.Email = editModel.Email;
+            currentUser.AvatarUrl = editModel.AvatarUrl;
+            currentUser.Bio = editModel.Bio;
+            isEditing = false;
+
+            // 通知外部（例如 AuthStatus）刷新头像
+            await OnProfileUpdated.InvokeAsync();
+        }
+    }
+
+    private async Task Close()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+    }
+
+    // 新增：处理文件选择
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            // 简单的格式校验
+            if (!file.ContentType.StartsWith("image/"))
+            {
+                uploadError = "请选择图片文件";
+                return;
+            }
+
+            isUploading = true;
+            uploadError = null;
+
+            try
+            {
+                // 调用 Service 上传图片
+                var newUrl = await BlogService.UploadAvatarAsync(file);
+
+                if (!string.IsNullOrEmpty(newUrl))
+                {
+                    // 上传成功，直接更新编辑模型中的 URL，这样上面的预览图会自动变化
+                    editModel.AvatarUrl = newUrl;
+                }
+                else
+                {
+                    uploadError = "上传失败，请重试";
+                }
+            }
+            catch (Exception ex)
+            {
+                uploadError = "上传出错: " + ex.Message;
+            }
+            finally
+            {
+                isUploading = false;
+            }
+        }
+    }
+}

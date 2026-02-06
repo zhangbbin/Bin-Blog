@@ -1,83 +1,104 @@
 ﻿@page "/"
-@page "/tag/{TagName}"
-@using Bin_Blog.Web.Data
-@using Bin_Blog.Web.Models
+@rendermode InteractiveServer
 @using Bin_Blog.Web.Services
+@using Bin_Blog.Web.Data
+@using Bin_Blog.Components.Shared
 @inject BlogService BlogService
 
-<PageTitle>Alex's Blog</PageTitle>
+<PageTitle>首页 - Bin's Blog</PageTitle>
 
-<div class="post-list fade-in">
+<div class="home-container fade-in">
+    @* 1. 插入分类栏 *@
+    <CategoryBar OnCategorySelected="FilterByCategory" OnSearch="FilterBySearch" />
 
-    @if (string.IsNullOrEmpty(TagName))
-    {
-        <h2 style="margin-bottom: 30px; font-weight:300;">最近文章</h2>
-    }
-    else
-    {
-        <h2 style="margin-bottom: 30px; font-weight:300;">
-            标签: <span style="color:var(--accent-color)">#@TagName</span>
-            <a href="/" style="font-size:0.8rem; float:right; text-decoration:none; color:var(--text-secondary)">清除筛选 ✕</a>
-        </h2>
-    }
-
-    @if (FilteredPosts.Count == 0)
-    {
-        <p>该标签下暂无文章。</p>
-    }
-    else
-    {
-        @foreach (var post in FilteredPosts)
+    @* 2. 文章列表 *@
+    <div class="posts-list">
+        @if (isLoading)
         {
-            <article class="card">
-                <div class="post-meta">
-                    <span>@post.PublishDate.ToString("yyyy-MM-dd")</span>
-                    <span> · </span>
-                    <span>@post.ReadingTime</span>
-
-                    <span style="margin-left: 10px;">
-                        @foreach (var tag in post.Tags)
-                        {
-                            <span style="margin-right:5px; color: var(--text-secondary);">#@tag</span>
-                        }
-                    </span>
-                </div>
-
-                <h2 class="post-title">
-                    <a href="/post/@post.Id" style="text-decoration:none; color:inherit;">
-                        @post.Title
-                    </a>
-                </h2>
-
-                <p class="post-summary">@post.Summary</p>
-
-                <a href="/post/@post.Id" style="color: var(--accent-color); text-decoration: none; font-weight: 500;">
-                    阅读全文 &rarr;
-                </a>
-            </article>
+            <div class="text-center mt-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p>加载文章中...</p>
+            </div>
         }
-    }
-</div>
-
-@code {
-    [Parameter]
-    public string? TagName { get; set; }
-
-    private List<BlogPost> FilteredPosts = new();
-
-    protected override void OnParametersSet()
-    {
-        var allPosts = BlogService.GetPosts();
-
-        if (string.IsNullOrEmpty(TagName))
+        else if (posts == null || !posts.Any())
         {
-            FilteredPosts = allPosts;
+            <div class="empty-state text-center mt-5">
+                <p style="color:#999;">暂无相关文章。</p>
+            </div>
         }
         else
         {
-            FilteredPosts = allPosts
-                .Where(p => p.Tags.Contains(TagName, StringComparer.OrdinalIgnoreCase))
-                .ToList();
+            @foreach (var post in posts)
+            {
+                <div class="post-card fade-in">
+                    <h2 class="post-title">
+                        <a href="/post/@post.Id">@post.Title</a>
+                    </h2>
+                    <div class="post-meta">
+                        <span>@post.PublishDate.ToString("yyyy-MM-dd")</span>
+
+                        @if (post.Category != null)
+                        {
+                            <span class="meta-separator">·</span>
+                            <span class="meta-category">@post.Category.Name</span>
+                        }
+                    </div>
+                    <p class="post-preview">
+                        @GetPreview(post.Content)
+                    </p>
+                    <a href="/post/@post.Id" class="read-more">阅读全文 &rarr;</a>
+                </div>
+                <hr class="post-divider" />
+            }
         }
+    </div>
+</div>
+
+@code {
+    private List<BlogPost> posts = new();
+    private bool isLoading = true;
+
+    // 当前筛选状态
+    private int? currentCategoryId;
+    private string? currentSearchKeyword;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPosts();
+    }
+
+    private async Task LoadPosts()
+    {
+        isLoading = true;
+        // 调用 Service 新增的带参数方法
+        posts = await BlogService.GetPostsAsync(currentCategoryId, currentSearchKeyword);
+        isLoading = false;
+        // 强制刷新 UI (在交互模式下有时需要)
+        StateHasChanged();
+    }
+
+    // 处理分类点击
+    private async Task FilterByCategory(int? categoryId)
+    {
+        currentCategoryId = categoryId;
+        currentSearchKeyword = null; // 切换分类时清空搜索？看你需求，这里先清空
+        await LoadPosts();
+    }
+
+    // 处理搜索
+    private async Task FilterBySearch(string keyword)
+    {
+        currentSearchKeyword = keyword;
+        // 搜索时是否保留分类筛选？这里保留，实现“在当前分类下搜索”
+        // 如果想全站搜索，可以设置 currentCategoryId = null;
+        await LoadPosts();
+    }
+
+    private string GetPreview(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        // 简单去除 Markdown 符号 (粗糙版)
+        var plain = System.Text.RegularExpressions.Regex.Replace(content, "[#*`>]", "");
+        return plain.Length > 150 ? plain.Substring(0, 150) + "..." : plain;
     }
 }

@@ -41,6 +41,9 @@ namespace Bin_Blog.Web.Data
         [MaxLength(50)]
         public string UserName { get; set; } = string.Empty;
 
+        [MaxLength(50)]
+        public string NickName { get; set; } = string.Empty;
+
         /// <summary>
         /// 邮箱（可选，但推荐唯一）
         /// </summary>
@@ -59,6 +62,11 @@ namespace Bin_Blog.Web.Data
         /// </summary>
         [Required]
         public string PasswordSalt { get; set; } = string.Empty;
+
+        public string? AvatarUrl { get; set; }
+
+        // 可选：添加个简介字段
+        public string? Bio { get; set; }
 
         /// <summary>
         /// 用户角色：决定能否发文章等
