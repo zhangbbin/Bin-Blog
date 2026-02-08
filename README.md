@@ -19,5 +19,25 @@
 只需两步，唤醒它：
 
 ```bash
-git clone [https://github.com/zhangbbin/bin-blog.git](https://github.com/zhangbbin/bin-blog.git)
+git clone https://github.com/zhangbbin/bin-blog.git
+cd bin-blog
 dotnet watch
+```
+
+### 📚 Documentation
+* **[快速开始指南 / Quick Start Guide](QUICK-START-GUIDE.md)** - 5 分钟上手开发
+* **[AI 开发提示词 / AI Development Prompts](AI-DEVELOPMENT-PROMPTS.md)** - 使用 AI 助手快速实现功能
+
+### 🎯 Roadmap
+- [x] 博客文章列表与详情页
+- [x] Markdown 渲染与代码高亮
+- [x] 标签筛选功能
+- [x] 昼夜主题切换
+- [x] Giscus 评论系统
+- [ ] 用户认证与授权
+- [ ] 后台管理面板
+- [ ] 全站搜索
+- [ ] SEO 优化与 RSS
+- [ ] 图片上传管理
+
+详细开发计划请查看 [AI-DEVELOPMENT-PROMPTS.md](AI-DEVELOPMENT-PROMPTS.md)
