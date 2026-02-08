@@ -3,6 +3,7 @@ using Bin_Blog.Components;
 using Bin_Blog.Web.Models;
 using Bin_Blog.Web.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,9 @@ builder.Services.AddDbContextFactory<BlogDbContext>(options =>
 // Configure services for Razor Components
 builder.Services.AddScoped<BlogService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<JwtAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthenticationStateProvider>());
+builder.Services.AddCascadingAuthenticationState();
 
 // Configure JWT authentication
 var jwtSection = builder.Configuration.GetSection("Jwt");
@@ -45,8 +49,8 @@ builder.Services
 
 builder.Services.AddAuthorization(options =>
 {
-    // 示例策略：仅管理员可访问
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("CanWrite", policy => policy.RequireRole("Admin", "Author"));
 });
 
 // 注册 HttpClient
@@ -129,5 +133,23 @@ authGroup.MapPost("/login", async (LoginRequest request, AuthService authService
 
     return Results.Ok(response);
 }).AllowAnonymous();
+
+authGroup.MapPost("/refresh", async (HttpContext httpContext, AuthService authService) =>
+{
+    var authHeader = httpContext.Request.Headers.Authorization.FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+    {
+        return Results.Unauthorized();
+    }
+
+    var token = authHeader["Bearer ".Length..];
+    var newToken = await authService.RefreshTokenAsync(token);
+    if (newToken == null)
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(new { Token = newToken });
+}).RequireAuthorization();
 
 app.Run();

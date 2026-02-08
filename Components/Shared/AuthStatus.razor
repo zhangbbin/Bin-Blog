@@ -1,6 +1,7 @@
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject Bin_Blog.Web.Services.BlogService BlogService
+@inject Bin_Blog.Web.Services.JwtAuthenticationStateProvider AuthStateProvider
 
 <div class="auth-status">
     @if (IsLoggedIn)
@@ -68,7 +69,7 @@
 
             if (IsLoggedIn && !string.IsNullOrEmpty(_loginUserName))
             {
-                // 登录成功后，去数据库查一下最新的头像
+                AuthStateProvider.NotifyUserAuthentication(token!);
                 await RefreshUserInfo();
             }
 
@@ -106,6 +107,8 @@
         await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
         await JS.InvokeVoidAsync("localStorage.removeItem", "userName");
         await JS.InvokeVoidAsync("localStorage.removeItem", "nickName");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "userRole");
+        AuthStateProvider.NotifyUserLogout();
         IsLoggedIn = false;
         UserName = string.Empty;
         _loginUserName = string.Empty;

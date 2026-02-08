@@ -31,9 +31,13 @@
             </button>
         </div>
 
-        <button class="write-post-btn" type="button" @onclick="GoWrite">
-            写文章
-        </button>
+        <AuthorizeView Policy="CanWrite">
+            <Authorized>
+                <button class="write-post-btn" type="button" @onclick="GoWrite">
+                    写文章
+                </button>
+            </Authorized>
+        </AuthorizeView>
     </div>
 </div>
 

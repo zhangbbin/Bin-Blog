@@ -19,62 +19,61 @@
         <h2 style="margin:0;">写文章</h2>
     </div>
 
-    @if (!IsLoggedIn)
-    {
-        <p style="color:var(--text-secondary); margin:0;">
-            请先登录后再写文章。
-        </p>
-    }
-    else
-    {
-        <div style="display:grid; grid-template-columns: 1fr; gap: 14px;">
-            <div>
-                <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">标题</label>
-                <input class="form-control" @bind="Model.Title" placeholder="请输入文章标题" />
-            </div>
+    <AuthorizeView>
+        <Authorized>
+            <div style="display:grid; grid-template-columns: 1fr; gap: 14px;">
+                <div>
+                    <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">标题</label>
+                    <input class="form-control" @bind="Model.Title" placeholder="请输入文章标题" />
+                </div>
 
-            <div>
-                <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">分类</label>
-                <select class="form-control" @bind="Model.CategoryId">
-                    <option value="">未分类</option>
-                    @foreach (var c in Categories)
-                    {
-                        <option value="@c.Id">@c.Name</option>
-                    }
-                </select>
-            </div>
+                <div>
+                    <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">分类</label>
+                    <select class="form-control" @bind="Model.CategoryId">
+                        <option value="">未分类</option>
+                        @foreach (var c in Categories)
+                        {
+                            <option value="@c.Id">@c.Name</option>
+                        }
+                    </select>
+                </div>
 
-            <div>
-                <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">内容（Markdown）</label>
-                <textarea class="form-control" style="min-height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"
-                          @bind="Model.Content"
-                          @bind:event="oninput"></textarea>
-            </div>
+                <div>
+                    <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">内容（Markdown）</label>
+                    <textarea class="form-control" style="min-height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"
+                              @bind="Model.Content"
+                              @bind:event="oninput"></textarea>
+                </div>
 
-            <div>
-                <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">预览</label>
-                <div class="markdown-body" style="border:1px solid var(--border-color, #eee); border-radius:8px; padding:12px; background: var(--bg-color);">
-                    @((MarkupString)PreviewHtml)
+                <div>
+                    <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:6px;">预览</label>
+                    <div class="markdown-body" style="border:1px solid var(--border-color, #eee); border-radius:8px; padding:12px; background: var(--bg-color);">
+                        @((MarkupString)PreviewHtml)
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Error))
+                {
+                    <div style="color:#c33;">@Error</div>
+                }
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button class="auth-link-btn" @onclick="Cancel" type="button">取消</button>
+                    <button class="auth-submit-btn" style="width:auto; padding:10px 16px;" @onclick="Publish" disabled="@IsSubmitting" type="button">
+                        @(IsSubmitting ? "发布中..." : "发布")
+                    </button>
                 </div>
             </div>
-
-            @if (!string.IsNullOrWhiteSpace(Error))
-            {
-                <div style="color:#c33;">@Error</div>
-            }
-
-            <div style="display:flex; gap:10px; justify-content:flex-end;">
-                <button class="auth-link-btn" @onclick="Cancel" type="button">取消</button>
-                <button class="auth-submit-btn" style="width:auto; padding:10px 16px;" @onclick="Publish" disabled="@IsSubmitting" type="button">
-                    @(IsSubmitting ? "发布中..." : "发布")
-                </button>
-            </div>
-        </div>
-    }
+        </Authorized>
+        <NotAuthorized>
+            <p style="color:var(--text-secondary); margin:0;">
+                请先登录后再写文章。
+            </p>
+        </NotAuthorized>
+    </AuthorizeView>
 </div>
 
 @code {
-    private bool IsLoggedIn;
     private string _loginUserName = string.Empty;
     private bool IsSubmitting;
     private string? Error;
@@ -101,11 +100,15 @@
     {
         if (!firstRender) return;
 
-        var token = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
-        var userName = await JS.InvokeAsync<string>("localStorage.getItem", "userName");
-        IsLoggedIn = !string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(userName);
-        _loginUserName = userName ?? string.Empty;
-        StateHasChanged();
+        try
+        {
+            var userName = await JS.InvokeAsync<string>("localStorage.getItem", "userName");
+            _loginUserName = userName ?? string.Empty;
+        }
+        catch
+        {
+            // ignore during prerendering
+        }
     }
 
     private async Task GoBack()

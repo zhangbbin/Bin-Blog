@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject Bin_Blog.Web.Services.JwtAuthenticationStateProvider AuthStateProvider
 
 @if (IsVisible)
 {
@@ -172,6 +173,8 @@
             await JS.InvokeVoidAsync("localStorage.setItem", "userName", result.UserName);
             await JS.InvokeVoidAsync("localStorage.setItem", "nickName", string.IsNullOrWhiteSpace(result.NickName) ? result.UserName : result.NickName);
             await JS.InvokeVoidAsync("localStorage.setItem", "userRole", result.Role);
+
+            AuthStateProvider.NotifyUserAuthentication(result.Token);
 
             var displayName = string.IsNullOrWhiteSpace(result.NickName) ? result.UserName : result.NickName;
             SuccessMessage = $"欢迎回来，{displayName}！";

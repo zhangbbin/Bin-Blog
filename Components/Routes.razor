@@ -5,7 +5,17 @@
 
 <Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <div class="card fade-in" style="text-align:center; padding: 60px 20px;">
+                    <h2>需要登录</h2>
+                    <p style="color: var(--text-secondary);">请先登录后再访问此页面。</p>
+                    <div style="margin-top: 20px;">
+                        <a href="/" style="color: var(--accent-color); text-decoration: none;">&larr; 返回首页</a>
+                    </div>
+                </div>
+            </NotAuthorized>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>

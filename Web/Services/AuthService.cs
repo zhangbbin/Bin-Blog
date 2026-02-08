@@ -73,7 +73,7 @@ public class AuthService
         var key = jwtSection.GetValue<string>("Key") ?? throw new InvalidOperationException("Jwt:Key is not configured.");
         var issuer = jwtSection.GetValue<string>("Issuer");
         var audience = jwtSection.GetValue<string>("Audience");
-        var expiresMinutes = jwtSection.GetValue<int?>("ExpiresMinutes") ?? 60;
+        var expiresMinutes = jwtSection.GetValue<int?>("ExpiresMinutes") ?? 10080;
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -95,6 +95,52 @@ public class AuthService
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    /// <summary>
+    /// 刷新 Token：验证旧 Token 中的用户仍然有效，签发新 Token。
+    /// </summary>
+    public async Task<string?> RefreshTokenAsync(string existingToken)
+    {
+        try
+        {
+            var jwtSection = _configuration.GetSection("Jwt");
+            var key = jwtSection.GetValue<string>("Key")!;
+            var issuer = jwtSection.GetValue<string>("Issuer");
+            var audience = jwtSection.GetValue<string>("Audience");
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var validationParams = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+                ValidateIssuer = true,
+                ValidIssuer = issuer,
+                ValidateAudience = true,
+                ValidAudience = audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromMinutes(5)
+            };
+
+            var principal = await tokenHandler.ValidateTokenAsync(existingToken, validationParams);
+            if (!principal.IsValid)
+                return null;
+
+            var userIdClaim = principal.ClaimsIdentity.FindFirst(ClaimTypes.NameIdentifier)
+                           ?? principal.ClaimsIdentity.FindFirst(JwtRegisteredClaimNames.Sub);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+                return null;
+
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsActive);
+            if (user == null)
+                return null;
+
+            return GenerateJwtToken(user);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void CreatePasswordHash(string password, out string hash, out string salt)
