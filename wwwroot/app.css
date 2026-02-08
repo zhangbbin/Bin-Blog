@@ -6,6 +6,7 @@
     --text-secondary: #7f8c8d;
     --accent-color: #d35400; /* 这里的焦糖色作为点缀，显得高级 */
     --border-radius: 8px;
+    --border-color: #e5e7eb;
 }
 
 .category-actions {
@@ -760,10 +761,10 @@ h1, h2, h3 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #fff; /* 或 var(--bg-primary) */
+    background: var(--card-bg);
     padding: 10px 0;
     margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     width: 100%;
     /* 粘性定位：滚动时吸顶 (可选) */
     /* position: sticky; top: 0; z-index: 10; */
