@@ -1,28 +1,123 @@
 ﻿@page "/about"
+@rendermode InteractiveServer
+@using Bin_Blog.Web.Data
+@using Bin_Blog.Web.Services
+@using Markdig
+@inject AuthenticationStateProvider AuthStateProvider
+@inject BlogService BlogService
+
+<PageTitle>关于我 - Bin's Blog</PageTitle>
 
 <div class="card fade-in" style="min-height: 500px;">
     <h1 style="text-align:center; margin-bottom:40px;">关于我</h1>
 
-    <div style="display:flex; justify-content:center; margin-bottom:30px;">
-        <div style="width:120px; height:120px; border-radius:50%; background:#e0e0e0;"></div>
-    </div>
+    @if (_isLoggedIn && _user != null)
+    {
+        <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:30px;">
+            <img src="@(string.IsNullOrEmpty(_user.AvatarUrl) ? "/images/default-avatar.png" : _user.AvatarUrl)"
+                 alt="@_user.UserName"
+                 style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid rgba(0,0,0,0.06);"
+                 onerror="this.src='/images/default-avatar.png'" />
 
-    <div class="markdown-body" style="max-width: 700px; margin: 0 auto;">
-        <p>你好！我是 <strong>Alex</strong>。</p>
-        <p>我是一名热衷于极简设计的全栈开发者。这个博客是我用来记录学习笔记、分享技术见解以及生活感悟的地方。</p>
+            <h2 style="margin-top:16px; margin-bottom:4px;">
+                @(string.IsNullOrWhiteSpace(_user.NickName) ? _user.UserName : _user.NickName)
+            </h2>
+            <p style="color:var(--text-secondary); font-size:0.9rem; margin:0;">
+                @@@(_user.UserName)
+            </p>
+        </div>
 
-        <h3>技术栈</h3>
-        <ul>
-            <li>.NET / C# / Blazor</li>
-            <li>Vue.js / React</li>
-            <li>Cloud Architecture (Azure)</li>
-        </ul>
+        <div class="markdown-body" style="max-width: 700px; margin: 0 auto;">
+            @if (!string.IsNullOrWhiteSpace(_user.Bio))
+            {
+                @((MarkupString)_bioHtml)
+            }
+            else
+            {
+                <p style="color:var(--text-secondary); text-align:center;">这个人很懒，还没有填写简介。</p>
+            }
+        </div>
+    }
+    else if (_isLoggedIn && _user == null && !_isLoading)
+    {
+        <p style="color:var(--text-secondary); text-align:center;">未能加载用户信息，请稍后重试。</p>
+    }
+    else if (_isLoading)
+    {
+        <p style="text-align:center; color:var(--text-secondary);">加载中...</p>
+    }
+    else
+    {
+        @* 未登录时显示默认静态内容 *@
+        <div style="display:flex; justify-content:center; margin-bottom:30px;">
+            <div style="width:120px; height:120px; border-radius:50%; background:#e0e0e0;"></div>
+        </div>
 
-        <h3>联系我</h3>
-        <p>你可以通过以下方式找到我：</p>
-        <ul>
-            <li>Email: <a href="mailto:example@email.com">example@email.com</a></li>
-            <li>GitHub: <a href="#">github.com/alex</a></li>
-        </ul>
-    </div>
+        <div class="markdown-body" style="max-width: 700px; margin: 0 auto;">
+            <p>你好！我是 <strong>Alex</strong>。</p>
+            <p>我是一名热衷于极简设计的全栈开发者。这个博客是我用来记录学习笔记、分享技术见解以及生活感悟的地方。</p>
+
+            <h3>技术栈</h3>
+            <ul>
+                <li>.NET / C# / Blazor</li>
+                <li>Vue.js / React</li>
+                <li>Cloud Architecture (Azure)</li>
+            </ul>
+
+            <h3>联系我</h3>
+            <p>你可以通过以下方式找到我：</p>
+            <ul>
+                <li>Email: <a href="mailto:example@email.com">example@email.com</a></li>
+                <li>GitHub: <a href="#">github.com/alex</a></li>
+            </ul>
+        </div>
+    }
 </div>
+
+@code {
+    private bool _isLoading = true;
+    private bool _isLoggedIn;
+    private User? _user;
+    private string _bioHtml = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
+
+            _isLoggedIn = principal?.Identity?.IsAuthenticated == true;
+            if (!_isLoggedIn)
+            {
+                _isLoading = false;
+                return;
+            }
+
+            var loginUserName = principal!.Identity!.Name;
+            if (string.IsNullOrWhiteSpace(loginUserName))
+            {
+                _isLoggedIn = false;
+                _isLoading = false;
+                return;
+            }
+
+            _user = await BlogService.GetUserByNameAsync(loginUserName);
+
+            if (_user != null && !string.IsNullOrWhiteSpace(_user.Bio))
+            {
+                var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+                _bioHtml = Markdown.ToHtml(_user.Bio, pipeline);
+            }
+        }
+        catch
+        {
+            _isLoggedIn = false;
+            _user = null;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

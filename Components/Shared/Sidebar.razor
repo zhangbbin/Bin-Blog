@@ -1,8 +1,8 @@
-﻿@using Bin_Blog.Web.Data
+﻿@rendermode InteractiveServer
+@using Bin_Blog.Web.Data
 @using Bin_Blog.Web.Models
 @using Bin_Blog.Web.Services
 @inject BlogService BlogService
-@inject IJSRuntime JS
 
 <div class="sidebar">
     <div class="card profile-card">
@@ -11,36 +11,31 @@
                 了解更多关于我 &rarr;
             </a>
         </div>
-        <div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:10px;">
-            <img src="@GetAvatarUrl()"
-                 alt="@_displayName"
-                 style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:1px solid rgba(0,0,0,0.06);"
-                 onerror="this.src='/images/default-avatar.png'" />
-
-            <h3 style="margin:0;">@_displayName</h3>
-        </div>
-
-        @if (!string.IsNullOrWhiteSpace(_bio))
+        @if (_isLoggedIn)
         {
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top:10px;">
-                @_bio
-            </p>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:10px;">
+                <img src="@GetAvatarUrl()"
+                     alt="@_nickName"
+                     style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:1px solid rgba(0,0,0,0.06);"
+                     onerror="this.src='/images/default-avatar.png'" />
+
+                <h3 style="margin:0;">@_nickName</h3>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_bioTruncated))
+            {
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top:8px; text-align:center;">
+                    @_bioTruncated
+                </p>
+            }
         }
         else
         {
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top:10px;">
-                @if (_isLoggedIn)
-                {
-                    <span>这个人很懒，还没有填写简介。</span>
-                }
-                else
-                {
-                    <>
-                        <span>全栈开发者 / 极简主义者。</span>
-                        <br />
-                        <span>分享代码、设计与生活的思考。</span>
-                    </>
-                }
+            <div class="profile-img"></div>
+            <h3>Alex 的博客</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                全栈开发者 / 极简主义者。
+                <br />
+                分享代码、设计与生活的思考。
             </p>
         }
     </div>
@@ -112,24 +107,22 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
     private List<BlogPost> PopularPosts = new();
     private List<Announcement> Announcements = new();
 
     private bool _isLoggedIn;
-    private string _displayName = "Alex 的博客";
+    private string _nickName = string.Empty;
     private string? _avatarUrl;
-    private string? _bio;
+    private string? _bioTruncated;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            await LoadCurrentUserForSidebarAsync();
-
-            // 获取所有文章（防御性编程，避免空引用）
             var posts = await BlogService.GetPostsAsync() ?? new List<BlogPost>();
-
-            // 简单示例：按发布时间倒序取前 5 篇作为热门文章
             PopularPosts = posts
                 .OrderByDescending(p => p.PublishDate)
                 .Take(5)
@@ -137,16 +130,16 @@
 
             Announcements = await BlogService.GetAnnouncementsAsync(5);
         }
-        catch (Exception)
+        catch
         {
-            // 如果这里出错，不让整个应用崩溃，只是侧边栏不显示数据
             PopularPosts = new List<BlogPost>();
             Announcements = new List<Announcement>();
-            _isLoggedIn = false;
-            _displayName = "Alex 的博客";
-            _avatarUrl = null;
-            _bio = null;
         }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadCurrentUserForSidebarAsync();
     }
 
     private string GetAvatarUrl()
@@ -156,34 +149,63 @@
     {
         try
         {
-            var token = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
-            var userName = await JS.InvokeAsync<string>("localStorage.getItem", "userName");
-            var nickName = await JS.InvokeAsync<string>("localStorage.getItem", "nickName");
-
-            _isLoggedIn = !string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(userName);
-            if (!_isLoggedIn)
+            if (AuthState == null)
             {
-                _displayName = "Alex 的博客";
-                _avatarUrl = null;
-                _bio = null;
+                ResetUserState();
                 return;
             }
 
-            _displayName = string.IsNullOrWhiteSpace(nickName) ? userName! : nickName!;
+            var authState = await AuthState;
+            var principal = authState.User;
 
-            var user = await BlogService.GetUserByNameAsync(userName!);
+            _isLoggedIn = principal?.Identity?.IsAuthenticated == true;
+            if (!_isLoggedIn)
+            {
+                ResetUserState();
+                return;
+            }
+
+            var loginUserName = principal!.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(loginUserName))
+            {
+                ResetUserState();
+                return;
+            }
+
+            var user = await BlogService.GetUserByNameAsync(loginUserName);
             if (user != null)
             {
+                _nickName = string.IsNullOrWhiteSpace(user.NickName) ? user.UserName : user.NickName;
                 _avatarUrl = user.AvatarUrl;
-                _bio = user.Bio;
+                _bioTruncated = TruncateBio(user.Bio, 60);
+            }
+            else
+            {
+                _nickName = loginUserName;
+                _avatarUrl = null;
+                _bioTruncated = null;
             }
         }
         catch
         {
-            _isLoggedIn = false;
-            _displayName = "Alex 的博客";
-            _avatarUrl = null;
-            _bio = null;
+            ResetUserState();
         }
+    }
+
+    private void ResetUserState()
+    {
+        _isLoggedIn = false;
+        _nickName = string.Empty;
+        _avatarUrl = null;
+        _bioTruncated = null;
+    }
+
+    private static string? TruncateBio(string? bio, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(bio))
+            return null;
+
+        var trimmed = bio.Trim();
+        return trimmed.Length <= maxLength ? trimmed : string.Concat(trimmed.AsSpan(0, maxLength), "...");
     }
 }

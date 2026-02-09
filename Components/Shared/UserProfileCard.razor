@@ -78,7 +78,6 @@
                     <div class="info-view">
                         <h5 class="username">@(string.IsNullOrWhiteSpace(currentUser.NickName) ? currentUser.UserName : currentUser.NickName)</h5>
                         <p class="email">@currentUser.Email</p>
-                        <p class="bio">@(string.IsNullOrEmpty(currentUser.Bio) ? "这个家伙很懒，什么也没写。" : currentUser.Bio)</p>
 
                         <button class="btn btn-outline-primary btn-sm w-100 mt-2" @onclick="StartEdit">编辑资料</button>
                     </div>
