@@ -14,6 +14,11 @@
             <NavLink href="/guestbook" class="nav-link-item">留言板</NavLink>
             <NavLink href="/friends" class="nav-link-item">友链</NavLink>
             <NavLink href="/about" class="nav-link-item">关于本站</NavLink>
+            <AuthorizeView Roles="Admin,Author">
+                <Authorized>
+                    <NavLink href="/admin" class="nav-link-item">管理</NavLink>
+                </Authorized>
+            </AuthorizeView>
         </nav>
 
         <div class="actions">

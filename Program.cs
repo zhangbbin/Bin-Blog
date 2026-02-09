@@ -17,6 +17,7 @@ builder.Services.AddDbContextFactory<BlogDbContext>(options =>
 
 // Configure services for Razor Components
 builder.Services.AddScoped<BlogService>();
+builder.Services.AddScoped<AdminBlogService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthenticationStateProvider>());

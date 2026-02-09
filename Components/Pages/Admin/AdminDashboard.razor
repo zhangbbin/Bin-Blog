@@ -1,0 +1,211 @@
+@page "/admin"
+@rendermode InteractiveServer
+@using Bin_Blog.Web.Data
+@using Bin_Blog.Web.Services
+@inject AdminBlogService AdminService
+@inject BlogService BlogService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>管理后台 - Bin's Blog</PageTitle>
+
+<AuthorizeView Roles="Admin,Author">
+    <Authorized>
+        <div class="admin-container fade-in">
+            <div class="admin-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" class="write-back-btn" title="返回" @onclick="GoHome">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8" />
+                        </svg>
+                    </button>
+                    <h2 style="margin:0;">管理后台</h2>
+                </div>
+                <button class="write-post-btn" @onclick="GoNewPost">
+                    + 新建文章
+                </button>
+            </div>
+
+            @* 统计卡片 *@
+            <div class="admin-stats">
+                <div class="stat-card">
+                    <span class="stat-num">@_stats.PublishedCount</span>
+                    <span class="stat-label">已发布</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">@_stats.DraftCount</span>
+                    <span class="stat-label">草稿</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">@_stats.DeletedCount</span>
+                    <span class="stat-label">回收站</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">@_stats.TotalViews</span>
+                    <span class="stat-label">总浏览</span>
+                </div>
+            </div>
+
+            @* 筛选栏 *@
+            <div class="admin-filters">
+                <div class="admin-tab-bar">
+                    <button class="admin-tab @(_currentFilter == PostStatusFilter.Published ? "active" : "")"
+                            @onclick="() => SetFilter(PostStatusFilter.Published)">
+                        已发布
+                    </button>
+                    <button class="admin-tab @(_currentFilter == PostStatusFilter.Draft ? "active" : "")"
+                            @onclick="() => SetFilter(PostStatusFilter.Draft)">
+                        草稿
+                    </button>
+                    <button class="admin-tab @(_currentFilter == PostStatusFilter.Deleted ? "active" : "")"
+                            @onclick="() => SetFilter(PostStatusFilter.Deleted)">
+                        回收站
+                    </button>
+                </div>
+                <div class="admin-search">
+                    <input type="text" class="form-control" placeholder="搜索标题..."
+                           @bind="_searchKeyword" @bind:event="oninput"
+                           @onkeydown="HandleSearchEnter" />
+                </div>
+            </div>
+
+            @* 文章列表 *@
+            @if (_isLoading)
+            {
+                <p style="text-align:center; color:var(--text-secondary); padding:40px 0;">加载中...</p>
+            }
+            else if (!_posts.Any())
+            {
+                <p style="text-align:center; color:var(--text-secondary); padding:40px 0;">暂无文章</p>
+            }
+            else
+            {
+                <div class="admin-post-list">
+                    @foreach (var post in _posts)
+                    {
+                        <div class="admin-post-row">
+                            <div class="admin-post-info">
+                                <div class="admin-post-title">
+                                    @if (post.IsPinned)
+                                    {
+                                        <span class="admin-badge badge-pin">置顶</span>
+                                    }
+                                    @if (!post.IsPublished)
+                                    {
+                                        <span class="admin-badge badge-draft">草稿</span>
+                                    }
+                                    @post.Title
+                                </div>
+                                <div class="admin-post-meta">
+                                    <span>@(post.Author?.NickName ?? post.Author?.UserName ?? "未知")</span>
+                                    <span>·</span>
+                                    <span>@post.PublishDate.ToString("yyyy-MM-dd HH:mm")</span>
+                                    @if (post.Category != null)
+                                    {
+                                        <span>·</span>
+                                        <span>@post.Category.Name</span>
+                                    }
+                                    <span>·</span>
+                                    <span>@post.ViewCount 阅读</span>
+                                </div>
+                            </div>
+                            <div class="admin-post-actions">
+                                <button class="admin-action-btn" title="预览" @onclick="@(() => PreviewPost(post.Id))">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z" />
+                                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0" />
+                                    </svg>
+                                </button>
+                                <button class="admin-action-btn" title="编辑" @onclick="@(() => EditPost(post.Id))">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325" />
+                                    </svg>
+                                </button>
+                                @if (_currentFilter == PostStatusFilter.Deleted)
+                                {
+                                    <button class="admin-action-btn" title="恢复" @onclick="() => RestorePost(post.Id)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z" />
+                                            <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466" />
+                                        </svg>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="admin-action-btn action-danger" title="删除" @onclick="() => DeletePost(post.Id, post.Title)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z" />
+                                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z" />
+                                        </svg>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="card fade-in" style="text-align:center; padding:60px 20px;">
+            <h2>无权访问</h2>
+            <p style="color:var(--text-secondary);">请使用管理员或作者账号登录后访问。</p>
+            <a href="/" style="color:var(--accent-color); text-decoration:none;">&larr; 返回首页</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<BlogPost> _posts = new();
+    private AdminStats _stats = new();
+    private PostStatusFilter _currentFilter = PostStatusFilter.Published;
+    private string _searchKeyword = string.Empty;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        _stats = await AdminService.GetStatsAsync();
+        _posts = await AdminService.GetPostsAsync(_currentFilter, string.IsNullOrWhiteSpace(_searchKeyword) ? null : _searchKeyword);
+        _isLoading = false;
+    }
+
+    private async Task SetFilter(PostStatusFilter filter)
+    {
+        _currentFilter = filter;
+        await LoadData();
+    }
+
+    private async Task HandleSearchEnter(KeyboardEventArgs e)
+    {
+        if (e.Code is "Enter" or "NumpadEnter")
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task DeletePost(int postId, string title)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"确认删除「{title}」？（可从回收站恢复）");
+        if (!confirmed) return;
+
+        await AdminService.DeletePostAsync(postId);
+        await LoadData();
+    }
+
+    private async Task RestorePost(int postId)
+    {
+        await AdminService.RestorePostAsync(postId);
+        await LoadData();
+    }
+
+    private void GoHome() => Nav.NavigateTo("/");
+    private void GoNewPost() => Nav.NavigateTo("/admin/edit");
+    private void PreviewPost(int id) => Nav.NavigateTo($"/post/{id}");
+    private void EditPost(int id) => Nav.NavigateTo($"/admin/edit/{id}");
+}
